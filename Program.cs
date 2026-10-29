@@ -1,3 +1,4 @@
+
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,15 +18,15 @@ var csb = new NpgsqlConnectionStringBuilder
 {
     Host = uri.Host,
     Port = uri.IsDefaultPort || uri.Port == -1
-    ? 5432
-    : uri.Port,
+        ? 5432
+        : uri.Port,
     Database = uri.AbsolutePath.TrimStart('/'),
     Username = Uri.UnescapeDataString(userInfo[0]),
     Password = Uri.UnescapeDataString(userInfo[1]),
     SslMode = SslMode.Require
 };
 
-// HTTP endpoint
+// HTTP endpoint: Database connection test
 app.MapGet("/", async () =>
 {
     await using var connection =
@@ -41,4 +42,39 @@ app.MapGet("/", async () =>
     return $"Database connection successful! Server time: {result}";
 });
 
+// HTTP endpoint: Query all users
+app.MapGet("/users", async () =>
+{
+    var users = new List<object>();
+
+    await using var connection =
+        new NpgsqlConnection(csb.ConnectionString);
+
+    await connection.OpenAsync();
+
+    await using var command =
+        new NpgsqlCommand(
+            "SELECT id, name, email FROM users",
+            connection);
+
+    await using var reader =
+        await command.ExecuteReaderAsync();
+
+    while (await reader.ReadAsync())
+    {
+        users.Add(new
+        {
+            Id = reader.GetInt32(0),
+            Name = reader.GetString(1),
+            Email = reader.GetString(2)
+        });
+    }
+
+    return Results.Ok(users);
+});
+
 app.Run();
+
+
+
+
