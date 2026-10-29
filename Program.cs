@@ -16,7 +16,9 @@ var userInfo = uri.UserInfo.Split(':');
 var csb = new NpgsqlConnectionStringBuilder
 {
     Host = uri.Host,
-    Port = uri.Port,
+    Port = uri.IsDefaultPort || uri.Port == -1
+    ? 5432
+    : uri.Port,
     Database = uri.AbsolutePath.TrimStart('/'),
     Username = Uri.UnescapeDataString(userInfo[0]),
     Password = Uri.UnescapeDataString(userInfo[1]),
